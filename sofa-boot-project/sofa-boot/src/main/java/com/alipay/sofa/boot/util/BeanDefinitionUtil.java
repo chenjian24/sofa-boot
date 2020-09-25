@@ -87,6 +87,10 @@ public class BeanDefinitionUtil {
     }
 
     /**
+     *
+     *	//==========================JUSTINWARE==========================================
+     * 	//1、判定BeanDefinition是否通过Configuration类创建的
+     * 	//==============================================================================
      * @param beanDefinition Check whether it is a bean definition created from a configuration class
      *                       as opposed to any other configuration source.
      * @return

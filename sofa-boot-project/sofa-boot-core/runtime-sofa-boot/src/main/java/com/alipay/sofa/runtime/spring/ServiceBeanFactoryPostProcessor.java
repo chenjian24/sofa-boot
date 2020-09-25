@@ -73,6 +73,9 @@ import com.alipay.sofa.runtime.spring.parser.AbstractContractDefinitionParser;
 import com.alipay.sofa.runtime.spring.parser.ServiceDefinitionParser;
 
 /**
+ *	//==========================JUSTINWARE==========================================
+ * 	//1、作为BeanFactoryPostProcessor子类，处理@SofaService注解
+ * 	//==============================================================================
  * @author qilong.zql
  * @since 3.1.0
  */
@@ -80,9 +83,11 @@ import com.alipay.sofa.runtime.spring.parser.ServiceDefinitionParser;
 public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor,
                                             ApplicationContextAware, EnvironmentAware {
     private final PlaceHolderBinder binder = new DefaultPlaceHolderBinder();
+    //Spring上下文
     private ApplicationContext      applicationContext;
     private SofaRuntimeContext      sofaRuntimeContext;
     private BindingConverterFactory bindingConverterFactory;
+    //环境遍历
     private Environment             environment;
 
     public ServiceBeanFactoryPostProcessor(SofaRuntimeContext sofaRuntimeContext,
@@ -90,7 +95,11 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
         this.sofaRuntimeContext = sofaRuntimeContext;
         this.bindingConverterFactory = bindingConverterFactory;
     }
-
+    /**
+     *	//==========================JUSTINWARE==========================================
+     * 	//1、遍历BeanDefinition,通过transformSofaBeanDefinition将普通bean处理为Sofa Bean
+     * 	//==============================================================================
+     */
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         Arrays.stream(beanFactory.getBeanDefinitionNames())
@@ -99,6 +108,9 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
     }
 
     /**
+     *	//==========================JUSTINWARE==========================================
+     * 	//1、定义SofaBeanDefinition
+     * 	//==============================================================================
      * {@link ScannedGenericBeanDefinition}
      * {@link AnnotatedGenericBeanDefinition}
      * {@link GenericBeanDefinition}
@@ -108,9 +120,11 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
     private void transformSofaBeanDefinition(String beanId, BeanDefinition beanDefinition,
                                              ConfigurableListableBeanFactory beanFactory) {
         if (BeanDefinitionUtil.isFromConfigurationSource(beanDefinition)) {
+            //通过Configuration配置的Bean,这类的bean的注解是在方法上的。所以调用OnMethod方法
             generateSofaServiceDefinitionOnMethod(beanId, (AnnotatedBeanDefinition) beanDefinition,
                 beanFactory);
         } else {
+            //通过在类上注解@SofaReference的解析
             Class<?> beanClassType = BeanDefinitionUtil.resolveBeanClassType(beanDefinition);
             if (beanClassType == null) {
                 SofaLogger.warn("Bean class type cant be resolved from bean of {}", beanId);
@@ -120,6 +134,14 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
         }
     }
 
+    /**
+     *	//==========================JUSTINWARE==========================================
+     * 	//1、处理通过Configuration定义的Bean
+     * 	//==============================================================================
+     * @param beanId
+     * @param beanDefinition
+     * @param beanFactory
+     */
     private void generateSofaServiceDefinitionOnMethod(String beanId,
                                                        AnnotatedBeanDefinition beanDefinition,
                                                        ConfigurableListableBeanFactory beanFactory) {
@@ -147,10 +169,12 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
                 }
 
                 // check bean method
+                // 需要@Bean 声明的方法
                 if (!AnnotatedElementUtils.hasAnnotation(m, Bean.class)) {
                     continue;
                 }
 
+                //方法名、@Bean的name,value属性 作为beanId的可选匹配
                 Bean bean = m.getAnnotation(Bean.class);
                 Set<String> beanNames = new HashSet<>();
                 beanNames.add(m.getName());
@@ -178,6 +202,8 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
                 beanDefinition, beanFactory);
             generateSofaReferenceDefinition(beanId, candidateMethods.get(0), beanFactory);
         } else if (candidateMethods.size() > 1) {
+            //超出一处声明同一个beanId的SofaService则抛出异常
+            //同一方法注入同一beanId的SofaReference则跑错
             for (Method m : candidateMethods) {
                 if (AnnotatedElementUtils.hasAnnotation(m, SofaService.class)
                     || AnnotatedElementUtils.hasAnnotation(returnType, SofaService.class)) {
@@ -210,6 +236,15 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
         }
     }
 
+
+    /**
+     *	//==========================JUSTINWARE==========================================
+     * 	//1、生成@SofaReference的beanDefinition
+     * 	//2、仅支持JVM类型服务
+     * 	//3、referenceid为ReferenceFactoryBean#interfaceType:uniqueId
+     * 	//4、原BeanDefinition的dependenyOn为新创建的BeanDefinition
+     * 	//==============================================================================
+     */
     @SuppressWarnings("unchecked")
     private void doGenerateSofaReferenceDefinition(BeanDefinition beanDefinition,
                                                    SofaReference sofaReference,
@@ -222,6 +257,7 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
             sofaReference).withBinder(binder);
         sofaReference = wrapperBuilder.build();
         Class<?> interfaceType = sofaReference.interfaceType();
+        //未指定@SofaReference的interfaceType则使用方法名
         if (interfaceType.equals(void.class)) {
             interfaceType = parameterType;
         }
@@ -256,6 +292,11 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
         }
     }
 
+    /**
+     *	//==========================JUSTINWARE==========================================
+     * 	//1、处理通过类注解@SofaService的BeanDefinition
+     * 	//==============================================================================
+     */
     private void generateSofaServiceDefinitionOnClass(String beanId, Class<?> beanClass,
                                                       BeanDefinition beanDefinition,
                                                       ConfigurableListableBeanFactory beanFactory) {
@@ -264,6 +305,12 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
             beanFactory);
     }
 
+    /**
+     *	//==========================JUSTINWARE==========================================
+     * 	//1、通过SofaService注解生成SofaService BeanDefinition
+     * 	//2、serviceId为 ServiceFactoryBean#interfaceName:uniqueId
+     * 	//==============================================================================
+     */
     @SuppressWarnings("unchecked")
     private void generateSofaServiceDefinition(String beanId, SofaService sofaServiceAnnotation,
                                                Class<?> beanClass, BeanDefinition beanDefinition,
@@ -276,6 +323,7 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
         sofaServiceAnnotation = wrapperBuilder.build();
 
         Class<?> interfaceType = sofaServiceAnnotation.interfaceType();
+        //未指定intefaceType属性时自动适配Bean类型
         if (interfaceType.equals(void.class)) {
             Class<?> interfaces[] = beanClass.getInterfaces();
 
@@ -314,6 +362,12 @@ public class ServiceBeanFactoryPostProcessor implements BeanFactoryPostProcessor
         }
     }
 
+    /**
+     *	//==========================JUSTINWARE==========================================
+     * 	//1、获取SofaServiceBings的解析
+     * 	//2、
+     * 	//==============================================================================
+     */
     private List<Binding> getSofaServiceBinding(SofaService sofaServiceAnnotation,
                                                 SofaServiceBinding[] sofaServiceBindings) {
         List<Binding> bindings = new ArrayList<>();
