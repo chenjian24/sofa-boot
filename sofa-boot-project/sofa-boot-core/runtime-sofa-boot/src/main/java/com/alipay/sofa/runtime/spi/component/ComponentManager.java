@@ -37,7 +37,7 @@ public interface ComponentManager {
      */
     Collection<ComponentType> getComponentTypes();
 
-    void register(ComponentInfo componentInfo);
+    void  register(ComponentInfo componentInfo);
 
     /**
      * register and get component in this manager

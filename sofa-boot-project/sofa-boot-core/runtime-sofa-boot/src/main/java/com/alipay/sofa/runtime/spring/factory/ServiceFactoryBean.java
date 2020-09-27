@@ -46,6 +46,7 @@ public class ServiceFactoryBean extends AbstractContractFactoryBean {
 
     @Override
     protected void doAfterPropertiesSet() {
+        //如果是XML定义的Bean，判定是否被@也定义，防止重复注册
         if (!apiType && hasSofaServiceAnnotation()) {
             throw new ServiceRuntimeException(
                 "Bean " + beanId + " of type " + ref.getClass()
@@ -67,12 +68,17 @@ public class ServiceFactoryBean extends AbstractContractFactoryBean {
         for (Binding binding : bindings) {
             service.addBinding(binding);
         }
-
+        //在SofaRuntimeContext注册Bean
         ComponentInfo componentInfo = new ServiceComponent(implementation, service,
             bindingAdapterFactory, sofaRuntimeContext);
         sofaRuntimeContext.getComponentManager().register(componentInfo);
     }
 
+    /***
+     * 判定当前SERVICEFACTORY对应的Bean的类型是否有使用@SofaService
+     * 或则Bean上的@SofaService的uniqueId是否与当前的uniqueId一致
+     * * @return
+     */
     private boolean hasSofaServiceAnnotation() {
         Class<?> implementationClazz = ref.getClass();
         SofaService sofaService = implementationClazz.getAnnotation(SofaService.class);
@@ -93,6 +99,10 @@ public class ServiceFactoryBean extends AbstractContractFactoryBean {
         bindingConverterContext.setBeanId(beanId);
     }
 
+    /***
+     * 创建Service
+     * @return
+     */
     protected Service buildService() {
         return new ServiceImpl(uniqueId, getInterfaceClass(), InterfaceMode.spring, ref);
     }

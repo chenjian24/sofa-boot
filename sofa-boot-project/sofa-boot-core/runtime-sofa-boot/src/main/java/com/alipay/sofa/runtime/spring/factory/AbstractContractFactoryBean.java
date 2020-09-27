@@ -81,6 +81,7 @@ public abstract class AbstractContractFactoryBean implements InitializingBean, F
     public void afterPropertiesSet() throws Exception {
         List<Element> tempElements = new ArrayList<>();
         if (elements != null) {
+            //XML配置中对<sofa:binding>参数的解析,未配置会添加bingding.jvm的配置
             for (TypedStringValue element : elements) {
                 DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory
                     .newInstance();
@@ -94,11 +95,19 @@ public abstract class AbstractContractFactoryBean implements InitializingBean, F
             }
         }
         if (!apiType) {
+            //对XML参数的解析成对应的List<Binding>
             this.bindings = parseBindings(tempElements, applicationContext, isInBinding());
         }
         doAfterPropertiesSet();
     }
 
+    /**
+     * 解析XML配置的Binding配置项
+     * @param parseElements
+     * @param appContext
+     * @param isInBinding
+     * @return
+     */
     protected List<Binding> parseBindings(List<Element> parseElements,
                                           ApplicationContext appContext, boolean isInBinding) {
         List<Binding> result = new ArrayList<>();
@@ -142,6 +151,10 @@ public abstract class AbstractContractFactoryBean implements InitializingBean, F
         this.applicationContext = applicationContext;
     }
 
+    /***
+     * 获取当前FactoryBean要创建Bean的接口类
+     * @return
+     */
     public Class<?> getInterfaceClass() {
         if (interfaceClass == null) {
             try {
@@ -212,6 +225,7 @@ public abstract class AbstractContractFactoryBean implements InitializingBean, F
     }
 
     /**
+     * TODO: inBing的具体含义未知
      * is in binding or not
      *
      * @return true or false
